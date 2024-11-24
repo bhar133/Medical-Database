@@ -14,8 +14,12 @@ Commands to test run the schema.sql file:
     -> DESCRIBE (name of table)
         ^replace (name of table) with the one you want to look at
 
+    Next: Run script to fill tables with mock data
+    -> source script.sql;
+    
     Here is a command i ran to put an example person in the patients table:
         INSERT INTO Patients (patient_id, first_name, last_name, date_of_birth, contact_number, medical_history)
         VALUES (1, 'John', 'Doe', '1990-01-01', 1234567890, 'None');
     To see that data run this:
         SELECT * FROM Patients;
+
