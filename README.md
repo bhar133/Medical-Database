@@ -8,6 +8,9 @@ Commands to test run the schema.sql file:
     Next: you will be prompted to enter your sql password if you have one
     -> source schema.sql
         ^if you have a different path to it, then enter the path there
+    -> source script.sql
+        ^if different path use that
+        ^ this will fill the database with mock code
     -> SHOW DATABASES;
     -> USE medical;
     -> SHOW TABLES;
@@ -18,16 +21,6 @@ Commands to test run the schema.sql file:
 To Run the Frontend, open frontend.py and change the database variables in line 7-11 to your connections host, user, and password.
 In terminal run the command pip install pymysql 
 Then run using the command python frontend.py
-
-    Next: Run script to fill tables with mock data
-    -> source script.sql;
-    
-    Here is a command i ran to put an example person in the patients table:
-        INSERT INTO Patients (patient_id, first_name, last_name, date_of_birth, contact_number, medical_history)
-        VALUES (1, 'John', 'Doe', '1990-01-01', 1234567890, 'None');
-    To see that data run this:
-        SELECT * FROM Patients;
-
 
 Test Queries
 
