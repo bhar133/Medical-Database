@@ -14,6 +14,10 @@ Commands to test run the schema.sql file:
     -> DESCRIBE (name of table)
         ^replace (name of table) with the one you want to look at
 
+
+To Run the Frontend, open frontend.py and change the database variables in line 7-11 to your connections host, user, and password.
+Then run using the command python frontend.py
+
     Next: Run script to fill tables with mock data
     -> source script.sql;
     
