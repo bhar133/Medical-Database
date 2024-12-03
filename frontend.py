@@ -1,254 +1,119 @@
 import pymysql
-from datetime import datetime
 
-connection = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="1234",
-    database="medical"
+
+running = True
+#####################  Modify Code Here ###########################
+# Connect to the MySQL database
+conn = pymysql.connect(
+    host='localhost',  # Replace with your database host
+    user='root',  # Replace with your database username
+    password='1234',  # Replace with your database password
+    database='medical'  # Replace with your database name
 )
+cursor = conn.cursor()
 
-cursor = connection.cursor()
-
-
-
-def find_account_by_details():
-    try:
-        with connection.cursor() as cursor:
-            # Collect search details from the user
-            print("Search for Patient Account:")
-            first_name = input("First Name: ").strip()
-            last_name = input("Last Name: ").strip()
-            date_of_birth = input("Date of Birth (YYYY-MM-DD): ").strip()
-
-            # Query the database for the patient's account number
-            cursor.execute("""
-                SELECT patient_id 
-                FROM Patients
-                WHERE first_name = %s AND last_name = %s AND date_of_birth = %s;
-            """, (first_name, last_name, date_of_birth))
-
-            # Fetch the result
-            result = cursor.fetchone()
-
-            if result:
-                print(f"Patient Account Number: {result[0]}")
-            else:
-                print("No patient found with the provided details.")
-
-    except pymysql.MySQLError as e:
-        print(f"Database error: {e}")
-
-def add_patient_to_database():
-    # Connect to the MySQL database
-    try:
-        with connection.cursor() as cursor:
-            # Collect patient details from the user
-            print("Enter new patient details:")
-            patient_id = int(input("Patient ID: "))
-            first_name = input("First Name: ").strip()
-            last_name = input("Last Name: ").strip()
-            while True:
-                date_of_birth = input("Date of Birth (YYYY-MM-DD): ").strip()
-                try:
-                    datetime.strptime(date_of_birth, "%Y-%m-%d")  # Validate date format
-                    break
-                except ValueError:
-                    print("Invalid date format. Please use YYYY-MM-DD.")
-            contact_number = input("Contact Number (or press Enter to skip): ").strip()
-            contact_number = int(contact_number) if contact_number else None
-            medical_history = input("Medical History (or press Enter to skip): ").strip() or None
-
-            # Insert the new record into the table
-            try:
-                cursor.execute("""
-                    INSERT INTO Patients (patient_id, first_name, last_name, date_of_birth, contact_number, medical_history)
-                    VALUES (%s, %s, %s, %s, %s, %s);
-                """, (patient_id, first_name, last_name, date_of_birth, contact_number, medical_history))
-                connection.commit()
-                print("Patient added successfully!")
-            except pymysql.IntegrityError as e:
-                print(f"Error: {e}")
-    except:
-        print("error")
-
-class Patient:
-    def __init__(self, p_id):
-        self.p_id = p_id
-
-    def showOptions(self):
-        while True:
-            print("\n--- Patient Options ---")
-            print("1. Schedule an Appointment")
-            print("2. Cancel an Appointment")
-            print("3. View Bills")
-            print("4. View Appointments")
-            print("5. View Treatments")
-            print("6. Exit")
-            try:
-                action = int(input("Enter the number corresponding to your choice: "))
-                if action == 1:
-                    self.scheduleAppointment()
-                elif action == 2:
-                    self.cancelAppointment()
-                elif action == 3:
-                    self.viewBills()
-                elif action == 4:
-                    self.viewAppointments()
-                elif action == 5:
-                    self.viewTreatments()
-                elif action == 6:
-                    print("Exiting options. Goodbye!")
-                    break
-                else:
-                    print("Invalid choice. Please enter a number between 1 and 6.")
-            except ValueError:
-                print("Invalid input. Please enter a valid number.")
-
-    def scheduleAppointment(self):
-            try:
-                with connection.cursor() as cursor:
-                    # Collect appointment details from the user
-                    
-                    # Check if the patient exists
-                    cursor.execute("SELECT * FROM Patients WHERE patient_id = %s;", (self.p_id,))
-                    doctor_id = int(input("Enter Doctor ID: "))
-                    
-                    # Check if the doctor exists
-                    cursor.execute("SELECT * FROM Doctor WHERE doctor_id = %s;", (doctor_id,))
-                    if cursor.rowcount == 0:
-                        print("Doctor not found. Please check the Doctor ID.")
-                        return
-                    appointment_id = input("Enter the Appointment ID: ")
-                    appointment_date = input("Enter Appointment Date (YYYY-MM-DD): ").strip()
-                    appointment_time = input("Enter Appointment Time (HH:MM:SS): ").strip()
-                    reason = input("Enter the reason for the appointment: ").strip()
-
-                    # Validate date and time
-                    try:
-                        datetime.strptime(appointment_date, "%Y-%m-%d")
-                        datetime.strptime(appointment_time, "%H:%M:%S")
-                    except ValueError:
-                        print("Invalid date or time format.")
-                        return
-
-                    # Insert the scheduling record
-                    cursor.execute("""
-                        INSERT INTO Scheduling (appointment_id, date, time, reason)
-                        VALUES (%s, %s, %s, %s);
-                    """, (appointment_id, appointment_date, appointment_time, reason))
-                    connection.commit()
-
-                    # Insert the relationship in the Appointment table
-                    cursor.execute("""
-                        INSERT INTO Appointment (d_id, p_id, a_id)
-                        VALUES (%s, %s, %s);
-                    """, (doctor_id, self.p_id, appointment_id))
-                    connection.commit()
-
-                    print(f"Appointment scheduled successfully! Appointment ID: {appointment_id}")
-
-            except pymysql.MySQLError as e:
-                print(f"Database error: {e}")
-
-    def cancelAppointment(self):
-        print("Cancelling Appointment")
-
-    def viewBills(self):
-        query = "SELECT Billing.bill_id, Billing.amount_due, Billing.amount_paid, Billing.insurance_provider FROM Billed JOIN Billing ON Billed.b_id = Billing.bill_id WHERE Billed.p_id = %s;"
-        cursor.execute(query, (self.p_id))
-        result = cursor.fetchall()
-        for row in result:
-            print(row)
-        payBillID = int(input("Enter the Bill ID you would like to pay or 0 to return to the menu: "))
-        if payBillID == 0:
-            pass
+def view_appointments():
+    query = """
+    SELECT Patients.first_name, Patients.last_name, Scheduling.date, Scheduling.time, Scheduling.reason FROM Appointment JOIN Patients ON Appointment.p_id = Patients.patient_id JOIN Scheduling ON Appointment.a_id = Scheduling.appointment_id WHERE Appointment.d_id = 29;
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    print("\nAppointments:")
+    for row in results:
+        first_name, last_name, date, time, reason = row
+        # Convert time to a readable format
+        if isinstance(time, (str, bytes)):
+            time_str = time
         else:
-            amount_paid = int(input("How much would you like to pay"))
-            query = """
-            UPDATE billing
-            SET 
-                amount_paid = amount_paid + %s,
-                amount_due = amount_due - %s
-            WHERE billing_id = %s
-            """
-            cursor.execute(query, (amount_paid, amount_paid, payBillID))
+            time_str = str(time)
+        print(f"{first_name} {last_name}, {date}, {time_str}, {reason}")
 
-    def viewAppointments(self):
-        print("Viewing Appointments")
+def schedule_appointment():
+    query1 = "INSERT INTO Scheduling (appointment_id, date, time, reason) VALUES (5, '2024-12-10', '15:00:00', 'Follow-up Checkup');"
+    query2 = "INSERT INTO Appointment (d_id, p_id, a_id) VALUES (29, 62627, 5);"
+    try:
+        cursor.execute(query1)
+        cursor.execute(query2)
+        conn.commit()
+        print("\nAppointment successfully scheduled.")
+    except Exception as e:
+        conn.rollback()
+        print(f"Error scheduling appointment: {e}")
 
-    def viewTreatments(self):
-        print("Viewing Treatments")
+def view_bill():
+    query = """
+    SELECT Billing.bill_id, Billing.amount_due, Billing.amount_paid, Billing.insurance_provider
+    FROM Billing
+    JOIN Billed ON Billing.bill_id = Billed.b_id
+    WHERE Billed.p_id = 62627;
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    print("\nBill Details:")
+    for row in results:
+        print(row)
 
+def view_medications():
+    query = """
+    SELECT Patients.first_name, Patients.last_name, Treatment.medication, Treatment.dosage, Treatment.date
+    FROM Details
+    JOIN Patients ON Details.p_id = Patients.patient_id
+    JOIN Treatment ON Details.t_id = Treatment.treatment_id
+    WHERE Details.p_id = 62627;
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    print("\nMedications:")
+    for row in results:
+        print(row)
 
-class Doctor:
-    def __init__(self, d_id):
-        self.d_id = d_id
+def find_cardiologist():
+    query = """
+    SELECT Doctor.first_name, Doctor.last_name, Doctor.contact_number, Doctor.availability
+    FROM Doctor
+    WHERE Doctor.specialization = 'Cardiology' AND Doctor.availability LIKE '%Mon%';
+    """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    print("\nAvailable Cardiologists:")
+    for row in results:
+        print(row)
 
-    def showOptions(self):
-        while True:
-            print("\n--- Doctor Options ---")
-            print("1. View Appointments")
-            print("2. Set Availability")
-            print("3. Assign Treatment")
-            print("4, Exit")
-            try:
-                action = int(input("Enter the number corresponding to your choice: "))
-                if action == 1:
-                    self.viewAppointments()
-                elif action == 2:
-                    self.setAvailability()
-                elif action == 3:
-                    self.assignTreatment()
-                elif action == 4:
-                    print("Exiting options. Goodbye!")
-                    break
-                else:
-                    print("Invalid choice. Please enter a number between 1 and 6.")
-            except ValueError:
-                print("Invalid input. Please enter a valid number.")
+def main():
+    # Show options that correlate to test cases
+    print("Select an option:")
+    print("1. See all of Emma's appointments")
+    print("2. Schedule a new appointment")
+    print("3. View a patient's bill")
+    print("4. View a patient's medications")
+    print("5. Find a cardiologist available on Monday")
+    print("6. Exit")
+    choice = input("Enter your choice (1-6): ")
 
-    def viewAppointments(self):
-        pass
+    if choice == "1":
+        view_appointments()
+        return True
+    elif choice == "2":
+        schedule_appointment()
+        return True
+    elif choice == "3":
+        view_bill()
+        return True
+    elif choice == "4":
+        view_medications()
+        return True
+    elif choice == "5":
+        find_cardiologist()
+        return True
+    elif choice == "6":
+        return False
+    else:
+        print("Invalid choice. Please enter a number between 1 and 6.")
 
-    def setAvailability(self):
-        pass
+#Loop to run until user presses 6
+while running:
+    running = main()
 
-    def assignTreatment(self):
-        pass
-
-class HospitalManager:
-    pass
-
-def mainMenu():
-    print("Hello, Welcome to our Healthcare Management System")
-
-    print("Press 0 to register a new account")
-    print("Press 1 to sign in as a patient")
-    print("Press 2 to sign in as a doctor")
-    print("Press 3 to find account number")
-
-    choice = int(input(""))
-
-
-    if choice == 0:
-        add_patient_to_database()
-    elif choice == 1:
-        id = int(input("Enter your patient ID"))
-        user = Patient(id)
-        user.showOptions()
-        
-    elif choice == 2:
-        id = int(input("Enter your doctor ID"))
-        user = Doctor(id)
-        user.showOptions()
-
-    elif choice == 3:
-        find_account_by_details()
-    
-    mainMenu()
-
-
-mainMenu()
-
-
+# Close the database connection
+cursor.close()
+conn.close()
